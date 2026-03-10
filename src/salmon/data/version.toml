@@ -1,4 +1,12 @@
-current = "0.10.0"
+current = "0.10.0.post20260310"
+
+[[changelog]]
+version = "0.10.0.post20260310"
+date = "2026-03-10"
+notes = """
+Workflow integration test on the fork for the release-action migration. Safe to ignore.
+**Full Changelog**: https://github.com/tomerh2001/smoked-salmon/commits/0.10.0.post20260310
+"""
 
 [[changelog]]
 version = "0.10.0"

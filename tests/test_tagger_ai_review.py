@@ -525,6 +525,39 @@ def test_apply_ai_review_guardrails_preserves_existing_guest_artists() -> None:
     ]
 
 
+def test_apply_ai_review_guardrails_blocks_guest_to_main_promotion_without_track_support() -> None:
+    metadata = make_metadata()
+    metadata["artists"] = [
+        ("Anna Zak", "main"),
+        ("Itay Galo", "guest"),
+    ]
+    metadata["tracks"]["1"]["1"]["artists"] = [
+        ("Anna Zak", "main"),
+        ("Itay Galo", "guest"),
+    ]
+    metadata["tracks"]["1"]["2"]["artists"] = [
+        ("Anna Zak", "main"),
+        ("Itay Galo", "guest"),
+    ]
+    review = make_review(
+        artists=[
+            {"name": "Anna Zak", "role": "main"},
+            {"name": "Itay Galo", "role": "main"},
+        ]
+    )
+
+    sanitized_review, warnings = _apply_ai_review_guardrails(metadata, review, None)
+
+    assert sanitized_review["metadata"]["artists"] == [
+        {"name": "Anna Zak", "role": "main"},
+        {"name": "Itay Galo", "role": "guest"},
+    ]
+    assert warnings == [
+        "Preserved guest role for existing release artist(s) that the AI tried to promote to main "
+        "while current track metadata only supports guest: Itay Galo."
+    ]
+
+
 def test_apply_ai_review_guardrails_drops_unopened_url_additions() -> None:
     metadata = make_metadata()
     review = make_review(

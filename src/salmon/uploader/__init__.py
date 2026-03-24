@@ -180,16 +180,6 @@ def configure_tracker_overrides(gazelle_site: "BaseGazelleApi", ops_split: bool 
     is_flag=True,
     help="Automatically apply AI review suggestions when AI review is enabled.",
 )
-@click.option(
-    "--skip-initial-review",
-    is_flag=True,
-    help="Skip the initial manual metadata review before AI review.",
-)
-@click.option(
-    "--apply-ai-suggestions",
-    is_flag=True,
-    help="Automatically apply AI review suggestions when AI review is enabled.",
-)
 @click.option("-yyy", is_flag=True, help="Automatically pick the default answer for prompt")
 @click.option(
     "--skip-mqa",

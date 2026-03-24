@@ -1,4 +1,5 @@
 from salmon import cfg
+from salmon.uploader import up
 from salmon.uploader.upload import generate_source_links, generate_t_description
 
 
@@ -49,3 +50,10 @@ def test_generate_t_description_omits_empty_more_info_after_source_filter() -> N
 
     assert "[b]Source:[/b] [url=https://gammenterprises.bandcamp.com/album/cry-fi-dem]Bandcamp[/url]" in description
     assert "[b]More info:[/b]" not in description
+
+
+def test_up_command_registers_ai_review_flags_only_once() -> None:
+    option_names = [opt for param in up.params for opt in getattr(param, "opts", [])]
+
+    assert option_names.count("--skip-initial-review") == 1
+    assert option_names.count("--apply-ai-suggestions") == 1

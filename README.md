@@ -65,14 +65,23 @@ This is the mandatory workflow for any change that lands on this fork. It is the
 
 Every fork-changing task must follow this exact sequence:
 
-1. Create a new issue on the upstream repository for the bug or feature.
-2. Branch from upstream `smokin-salmon/smoked-salmon` `master`, not from this fork's `master`.
-3. Implement the fix on that upstream-based branch and open a focused upstream PR.
-4. Merge that PR branch into this fork's `master` so the integration branch stays ahead with the combined local state.
-5. Let the fork `master` CI/CD publish a new release and refresh the rolling Docker tags.
-6. Let local consumers use the new fork release artifacts instead of relying on an editable local checkout.
+1. First decide whether the change is new standalone upstream work or a follow-up to an already-open upstream PR.
+2. If it is new standalone work:
+   - create or reuse the appropriate upstream issue
+   - branch from upstream `smokin-salmon/smoked-salmon` `master`, not from this fork's `master`
+   - implement the fix on that upstream-based branch and open a focused upstream PR
+3. If it clearly belongs to an already-open upstream PR:
+   - do not create a duplicate upstream issue or duplicate upstream PR for the same work
+   - branch from, or commit directly onto, the existing upstream-facing branch that backs that PR
+   - update the existing upstream PR in place
+4. Keep the review path upstream-facing. Do not open a separate PR into this fork just to move the change around.
+5. Once the upstream-facing branch contains the desired state, merge that branch directly into this fork's `master` so the integration branch stays ahead with the combined local state.
+6. Let the fork `master` CI/CD publish a new release and refresh the rolling Docker tags.
+7. Let local consumers use the new fork release artifacts instead of relying on an editable local checkout.
 
-If you only want the AI work without the rest of the integration branch, use [PR #342](https://github.com/smokin-salmon/smoked-salmon/pull/342).
+Current example:
+
+- AI metadata review follow-up fixes should normally extend [PR #342](https://github.com/smokin-salmon/smoked-salmon/pull/342) on `feature/ai-metadata-review` instead of opening parallel upstream issues/PRs for branch-local follow-up work.
 
 ## 🔗 Fork Links
 

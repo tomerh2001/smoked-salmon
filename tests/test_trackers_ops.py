@@ -4,7 +4,6 @@ from pathlib import Path
 import anyio
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
 from salmon.common import UploadFiles
 from salmon.trackers.base import BaseGazelleApi
 from salmon.trackers.ops import OpsApi

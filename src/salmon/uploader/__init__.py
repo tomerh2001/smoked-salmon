@@ -311,7 +311,7 @@ async def up(
         source_url = await runtime.resolve_source_url(raw_source_url)
         if source_url != raw_source_url:
             click.secho(f"Resolved source URL: {source_url}", fg="yellow")
-    await upload(
+    await run_upload(
         gazelle_site,
         path,
         group_id,
@@ -341,7 +341,7 @@ async def up(
     )
 
 
-async def upload(
+async def run_upload(
     gazelle_site: "BaseGazelleApi",
     path: str,
     group_id: int | None,

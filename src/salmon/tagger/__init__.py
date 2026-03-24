@@ -11,17 +11,6 @@ from salmon.constants import (
     TAG_ENCODINGS,
 )
 from salmon.errors import InvalidMetadataError, ScrapeError
-from salmon.tagger.ai_review import review_metadata_with_ai
-from salmon.tagger.audio_info import gather_audio_info
-from salmon.tagger.cover import download_cover_if_nonexistent
-from salmon.tagger.foldername import rename_folder
-from salmon.tagger.folderstructure import check_folder_structure
-from salmon.tagger.metadata import get_metadata
-from salmon.tagger.pre_data import construct_rls_data
-from salmon.tagger.retagger import rename_files, tag_files
-from salmon.tagger.review import review_metadata
-from salmon.tagger.sources import run_metadata
-from salmon.tagger.tags import check_tags, gather_tags, standardize_tags
 
 
 def validate_source(ctx, param, value):
@@ -115,6 +104,17 @@ async def tag(
         skip_initial_review: Skip the first manual metadata review before AI review.
         apply_ai_suggestions: Automatically apply AI review suggestions when present.
     """
+    from salmon.tagger.ai_review import review_metadata_with_ai
+    from salmon.tagger.audio_info import gather_audio_info
+    from salmon.tagger.cover import download_cover_if_nonexistent
+    from salmon.tagger.foldername import rename_folder
+    from salmon.tagger.folderstructure import check_folder_structure
+    from salmon.tagger.metadata import get_metadata
+    from salmon.tagger.pre_data import construct_rls_data
+    from salmon.tagger.retagger import rename_files, tag_files
+    from salmon.tagger.review import review_metadata
+    from salmon.tagger.tags import check_tags, gather_tags, standardize_tags
+
     click.secho(f"\nProcessing {path}", fg="cyan", bold=True)
     standardize_tags(path)
     tags = gather_tags(path)
@@ -149,6 +149,8 @@ async def meta(url: str) -> None:
     Args:
         url: URL to scrape metadata from.
     """
+    from salmon.tagger.sources import run_metadata
+
     try:
         metadata = await run_metadata(url)
         for key in ["encoding", "media", "encoding_vbr", "source"]:

@@ -6,14 +6,6 @@ A simple tool to take the work out of uploading on Gazelle-based trackers. It ge
 
 This repository is Tomer's actively maintained fork of `smokin-salmon/smoked-salmon`. Use this README for the fork-specific policy, integration-branch rules, and release/distro differences. Use upstream docs for the inherited base feature set.
 
-## 🔗 Fork Links
-
-- Fork repository: https://github.com/tomerh2001/smoked-salmon
-- Upstream repository: https://github.com/smokin-salmon/smoked-salmon
-- Fork issues: https://github.com/tomerh2001/smoked-salmon/issues
-- Fork releases: https://github.com/tomerh2001/smoked-salmon/releases
-- Docker images: `ghcr.io/tomerh2001/smoked-salmon:latest`, `ghcr.io/tomerh2001/smoked-salmon:personal-fork`, and `ghcr.io/tomerh2001/smoked-salmon:alpha`
-
 ## 🌟 Features
 
 This section documents the fork-only value on `master`: what this fork currently has that upstream does not.
@@ -81,3 +73,11 @@ Every fork-changing task must follow this exact sequence:
 6. Let local consumers use the new fork release artifacts instead of relying on an editable local checkout.
 
 If you only want the AI work without the rest of the integration branch, use [PR #342](https://github.com/smokin-salmon/smoked-salmon/pull/342).
+
+## 🔗 Fork Links
+
+- Fork repository: https://github.com/tomerh2001/smoked-salmon
+- Upstream repository: https://github.com/smokin-salmon/smoked-salmon
+- Fork issues: https://github.com/tomerh2001/smoked-salmon/issues
+- Fork releases: https://github.com/tomerh2001/smoked-salmon/releases
+- Docker images: `ghcr.io/tomerh2001/smoked-salmon:latest`, `ghcr.io/tomerh2001/smoked-salmon:personal-fork`, and `ghcr.io/tomerh2001/smoked-salmon:alpha`

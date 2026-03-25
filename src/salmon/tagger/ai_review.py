@@ -583,24 +583,6 @@ def _url_explicitly_names_label(url: str, label: str) -> bool:
     return _page_explicitly_names_label(page_text, label)
 
 
-def _collect_track_artist_roles(metadata: dict[str, Any]) -> dict[str, set[str]]:
-    roles_by_artist: dict[str, set[str]] = {}
-    tracks = metadata.get("tracks", {})
-    if not isinstance(tracks, dict):
-        return roles_by_artist
-
-    for disc in tracks.values():
-        if not isinstance(disc, dict):
-            continue
-        for track in disc.values():
-            if not isinstance(track, dict):
-                continue
-            for artist in _normalize_artist_entries(track.get("artists")):
-                roles_by_artist.setdefault(artist["name"].casefold(), set()).add(artist["role"])
-
-    return roles_by_artist
-
-
 def _guard_ai_artist_change(metadata: dict[str, Any], review: dict[str, Any]) -> str | None:
     review_metadata = review.get("metadata")
     if not isinstance(review_metadata, dict) or "artists" not in review_metadata:
@@ -611,41 +593,6 @@ def _guard_ai_artist_change(metadata: dict[str, Any], review: dict[str, Any]) ->
     if not current_artists or not proposed_artists:
         return None
 
-    warnings: list[str] = []
-    track_artist_roles = _collect_track_artist_roles(metadata)
-    proposed_roles_by_name = {
-        artist["name"].casefold(): set()
-        for artist in proposed_artists
-    }
-    for artist in proposed_artists:
-        proposed_roles_by_name.setdefault(artist["name"].casefold(), set()).add(artist["role"])
-
-    preserved_guest_roles: list[str] = []
-    for artist in current_artists:
-        if artist["role"] != "guest":
-            continue
-
-        artist_key = artist["name"].casefold()
-        proposed_roles = proposed_roles_by_name.get(artist_key, set())
-        track_roles = track_artist_roles.get(artist_key, set())
-        if "main" not in proposed_roles or "guest" in proposed_roles or not track_roles or track_roles - {"guest"}:
-            continue
-
-        for proposed_artist in proposed_artists:
-            if proposed_artist["name"].casefold() == artist_key and proposed_artist["role"] == "main":
-                proposed_artist["role"] = "guest"
-        preserved_guest_roles.append(artist["name"])
-
-    if preserved_guest_roles:
-        proposed_artists = _normalize_artist_entries(proposed_artists)
-        review_metadata["artists"] = proposed_artists
-        warnings.append(
-            "Preserved guest role for existing release artist(s) that the AI tried to promote to main "
-            "while current track metadata only supports guest: "
-            + ", ".join(preserved_guest_roles)
-            + "."
-        )
-
     proposed_names = {artist["name"].casefold() for artist in proposed_artists}
     missing_guests = [
         artist
@@ -653,12 +600,11 @@ def _guard_ai_artist_change(metadata: dict[str, Any], review: dict[str, Any]) ->
         if artist["role"] == "guest" and artist["name"].casefold() not in proposed_names
     ]
     if not missing_guests:
-        return " ".join(warnings) if warnings else None
+        return None
 
     review_metadata["artists"] = [*proposed_artists, *missing_guests]
     guest_names = ", ".join(artist["name"] for artist in missing_guests)
-    warnings.append(f"Preserved existing guest artists that the AI tried to remove: {guest_names}.")
-    return " ".join(warnings)
+    return f"Preserved existing guest artists that the AI tried to remove: {guest_names}."
 
 
 def _guard_ai_url_change(

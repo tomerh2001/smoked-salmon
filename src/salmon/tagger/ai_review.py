@@ -147,9 +147,8 @@ When normalizing metadata, follow RED's upload, tagging, capitalization, and edi
 - Artists must follow RED's multiple-artists rules. List each credited release artist separately as
   a {name, role} entry. Use only supported roles: main, guest, remixer, composer, conductor,
   djcompiler, producer.
-- For contributing artists who only appear on certain tracks, prefer guest instead of promoting them
-  to main unless the release-level source clearly credits them as release artists. Do not drop a
-  supported release-level guest artist merely because that artist only appears on some tracks.
+- Do not drop a supported release-level guest artist merely because that artist only appears on
+  some tracks.
 - When individual artists are known on a compilation or split release, do not use "Various Artists"
   as a release artist entry. List the individual artists instead.
 - Use catno only when a release-level source supports it. For WEB, if there is no definitive catno
@@ -173,7 +172,8 @@ Only set label when a release-level source explicitly names a label or imprint f
 Do not treat a bare ℗ or © rights line as label evidence unless the source also explicitly presents
 that entity as the release label or imprint.
 If no opened release-level page explicitly names a label or imprint, do not replace the current
-label with a new guess.
+label with a new guess, except that you may normalize to `Self-Released` when opened release-level
+evidence clearly indicates the release is self-issued or has no distinct label or imprint.
 Use group_year for the earliest supported release year of the release group.
 Use year for the exact edition or source you identified.
 If you cannot distinguish them, set both to the same supported year.
@@ -357,9 +357,7 @@ async def _load_json_response(resp: aiohttp.ClientResponse, *, non_json_error: s
     return payload
 
 
-async def _fetch_response(
-    session: aiohttp.ClientSession, headers: dict[str, str], response_id: str
-) -> dict[str, Any]:
+async def _fetch_response(session: aiohttp.ClientSession, headers: dict[str, str], response_id: str) -> dict[str, Any]:
     async with session.get(f"{OPENAI_RESPONSES_URL}/{response_id}", headers=headers) as resp:
         payload = await _load_json_response(
             resp,
@@ -697,11 +695,7 @@ def _guard_ai_url_change(
     if not dropped_additions:
         return None
 
-    return (
-        "Ignored AI URL additions that were not opened during review: "
-        + ", ".join(dropped_additions)
-        + "."
-    )
+    return "Ignored AI URL additions that were not opened during review: " + ", ".join(dropped_additions) + "."
 
 
 def _guard_ai_label_change(
@@ -721,9 +715,15 @@ def _guard_ai_label_change(
     if current_label == proposed_label:
         return None
 
-    review_metadata["label"] = metadata.get("label")
     if proposed_label is None:
+        review_metadata["label"] = metadata.get("label")
         return "Ignored AI label removal because clearing label values requires manual review."
+
+    if proposed_label.casefold() == "self-released":
+        review_metadata["label"] = proposed_label
+        return None
+
+    review_metadata["label"] = metadata.get("label")
 
     opened_label_urls = {
         normalized_url
@@ -887,9 +887,7 @@ async def _stream_response(
             break
 
         try:
-            raw_line = await asyncio.wait_for(
-                resp.content.readline(), timeout=min(POLL_INTERVAL_SECONDS, remaining)
-            )
+            raw_line = await asyncio.wait_for(resp.content.readline(), timeout=min(POLL_INTERVAL_SECONDS, remaining))
         except TimeoutError:
             continue
 
@@ -968,9 +966,7 @@ async def _request_ai_review(
                         raise RuntimeError(f"OpenAI API error: {_extract_response_error(error_payload)}")
 
                     if use_background and resp.content_type == "text/event-stream":
-                        response_payload = await _stream_response(
-                            resp, session, headers, ai_cfg.timeout_seconds
-                        )
+                        response_payload = await _stream_response(resp, session, headers, ai_cfg.timeout_seconds)
                     else:
                         response_payload = await _load_json_response(
                             resp,
@@ -983,9 +979,7 @@ async def _request_ai_review(
             ) from exc
 
         if response_payload.get("status") in {"queued", "in_progress"}:
-            response_payload = await _wait_for_response(
-                session, headers, response_payload, ai_cfg.timeout_seconds
-            )
+            response_payload = await _wait_for_response(session, headers, response_payload, ai_cfg.timeout_seconds)
         status = response_payload.get("status")
         if status in {"failed", "cancelled", "incomplete"}:
             raise RuntimeError(f"AI metadata review did not complete successfully (status: {status})")
@@ -1231,9 +1225,13 @@ async def review_metadata_with_ai(
             enforce_required_fields=False,
         )
 
-    should_run = cfg.upload.yes_all or apply_suggestions or click.confirm(
-        click.style("\nRun AI metadata review?", fg="magenta"),
-        default=None,
+    should_run = (
+        cfg.upload.yes_all
+        or apply_suggestions
+        or click.confirm(
+            click.style("\nRun AI metadata review?", fg="magenta"),
+            default=None,
+        )
     )
     if not should_run:
         return await _finalize_manual_review(current_metadata, validator, manual_review)
@@ -1265,9 +1263,7 @@ async def review_metadata_with_ai(
         summary = review.get("summary")
         if isinstance(summary, str) and summary.strip():
             click.echo(
-                "\n"
-                + click.style("AI summary:", fg="yellow")
-                + f" {summary.strip()}",
+                "\n" + click.style("AI summary:", fg="yellow") + f" {summary.strip()}",
                 color=True,
             )
 

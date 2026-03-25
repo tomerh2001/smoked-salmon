@@ -4,7 +4,7 @@
 
 A simple tool to take the work out of uploading on Gazelle-based trackers. It generates spectrals, gathers metadata, allows re-tagging/renaming files, and automates the upload process.
 
-This repository is Tomer's actively maintained fork of `smokin-salmon/smoked-salmon`. Use this README for the fork-specific policy, integration-branch rules, and release/distro differences. Use upstream docs for the inherited base feature set.
+This repository is my actively maintained fork of `smokin-salmon/smoked-salmon`. Use this README for the fork-specific policy, integration-branch rules, and release/distro differences. Use upstream docs for the inherited base feature set.
 
 ## 🌟 Features
 

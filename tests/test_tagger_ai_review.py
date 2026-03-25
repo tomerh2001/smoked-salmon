@@ -86,10 +86,7 @@ def make_metadata() -> dict:
 def make_review(**metadata_overrides) -> dict:
     metadata = make_metadata()
     review_metadata = {
-        "artists": [
-            {"name": artist_name, "role": artist_role}
-            for artist_name, artist_role in metadata["artists"]
-        ],
+        "artists": [{"name": artist_name, "role": artist_role} for artist_name, artist_role in metadata["artists"]],
         "title": metadata["title"],
         "group_year": metadata["group_year"],
         "year": metadata["year"],
@@ -190,10 +187,7 @@ def test_build_ai_review_diff_formats_release_level_artist_changes() -> None:
 
     diff_lines = build_ai_review_diff(metadata, review)
 
-    assert (
-        "artists: Example Artist [main] -> Riddim Research Lab [main], Ant To Be [guest]"
-        in diff_lines
-    )
+    assert "artists: Example Artist [main] -> Riddim Research Lab [main], Ant To Be [guest]" in diff_lines
 
 
 def test_ai_review_schema_requires_every_metadata_key() -> None:
@@ -244,6 +238,7 @@ def test_system_prompt_reflects_red_metadata_rules_and_web_budget() -> None:
     assert "as strong evidence for `ITModels`, not for `ITModels / Doli & Penn`" in SYSTEM_PROMPT
     assert "prefer treating that as self-released/no-label rather than promoting the artist name to" in SYSTEM_PROMPT
     assert 'Only replace "Self-Released" or "Not on Label" with the artist name' in SYSTEM_PROMPT
+    assert "except that you may normalize to `Self-Released` when opened release-level" in SYSTEM_PROMPT
     assert "Artists means release-level artist entries only." in SYSTEM_PROMPT
     assert "List each credited release artist separately as" in SYSTEM_PROMPT
     assert "supported release-level guest artist merely because that artist only appears" in SYSTEM_PROMPT
@@ -436,6 +431,17 @@ def test_apply_ai_review_guardrails_ignores_unsupported_label_changes() -> None:
     ]
 
 
+def test_apply_ai_review_guardrails_allows_self_released_without_opened_label_citation() -> None:
+    metadata = make_metadata()
+    metadata["label"] = "doin' fine"
+    review = make_review(label="Self-Released")
+
+    sanitized_review, warnings = _apply_ai_review_guardrails(metadata, review, None)
+
+    assert sanitized_review["metadata"]["label"] == "Self-Released"
+    assert warnings == []
+
+
 def test_apply_ai_review_guardrails_accepts_explicit_opened_label_evidence(monkeypatch) -> None:
     metadata = make_metadata()
     review = make_review(label="New Label")
@@ -520,12 +526,10 @@ def test_apply_ai_review_guardrails_preserves_existing_guest_artists() -> None:
         {"name": "STARRI", "role": "guest"},
         {"name": "SOR UH", "role": "guest"},
     ]
-    assert warnings == [
-        "Preserved existing guest artists that the AI tried to remove: MSPAINTBOI, STARRI, SOR UH."
-    ]
+    assert warnings == ["Preserved existing guest artists that the AI tried to remove: MSPAINTBOI, STARRI, SOR UH."]
 
 
-def test_apply_ai_review_guardrails_blocks_guest_to_main_promotion_without_track_support() -> None:
+def test_apply_ai_review_guardrails_allows_guest_to_main_promotion() -> None:
     metadata = make_metadata()
     metadata["artists"] = [
         ("Anna Zak", "main"),
@@ -550,12 +554,9 @@ def test_apply_ai_review_guardrails_blocks_guest_to_main_promotion_without_track
 
     assert sanitized_review["metadata"]["artists"] == [
         {"name": "Anna Zak", "role": "main"},
-        {"name": "Itay Galo", "role": "guest"},
+        {"name": "Itay Galo", "role": "main"},
     ]
-    assert warnings == [
-        "Preserved guest role for existing release artist(s) that the AI tried to promote to main "
-        "while current track metadata only supports guest: Itay Galo."
-    ]
+    assert warnings == []
 
 
 def test_apply_ai_review_guardrails_drops_unopened_url_additions() -> None:

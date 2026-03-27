@@ -16,6 +16,7 @@ from salmon.tagger.ai_review import (
     _build_release_reference,
     _build_request_payload,
     _choose_ai_anchor_url,
+    _emit_ai_status_heartbeat,
     _extract_opened_page_urls,
     _extract_progress_updates,
     _format_ai_progress,
@@ -380,6 +381,47 @@ def test_extract_progress_updates_reports_reasoning_and_web_search() -> None:
     assert not any("find in page" in line for line in lines)
     assert not any(line.endswith("open page") for line in lines)
     assert last_summary == "Keeping the anchor page as primary evidence."
+
+
+def test_emit_ai_status_heartbeat_reports_initial_and_periodic_waits(monkeypatch) -> None:
+    emitted: list[str] = []
+    monotonic_values = iter([100.0, 104.0, 116.0, 117.0])
+
+    monkeypatch.setattr(ai_review.time, "monotonic", lambda: next(monotonic_values))
+    monkeypatch.setattr(ai_review, "_emit_ai_progress", emitted.append)
+
+    last_status, last_emit_at = _emit_ai_status_heartbeat(
+        "queued",
+        started_at=100.0,
+        last_status=None,
+        last_emit_at=None,
+    )
+    last_status, last_emit_at = _emit_ai_status_heartbeat(
+        "queued",
+        started_at=100.0,
+        last_status=last_status,
+        last_emit_at=last_emit_at,
+    )
+    last_status, last_emit_at = _emit_ai_status_heartbeat(
+        "queued",
+        started_at=100.0,
+        last_status=last_status,
+        last_emit_at=last_emit_at,
+    )
+    last_status, last_emit_at = _emit_ai_status_heartbeat(
+        "in_progress",
+        started_at=100.0,
+        last_status=last_status,
+        last_emit_at=last_emit_at,
+    )
+
+    assert emitted == [
+        "status: queued (0s elapsed)",
+        "status: queued (16s elapsed)",
+        "status: in_progress (17s elapsed)",
+    ]
+    assert last_status == "in_progress"
+    assert last_emit_at == 117.0
 
 
 def test_extract_opened_page_urls_keeps_only_completed_open_page_actions() -> None:

@@ -20,6 +20,7 @@ from salmon.errors import InvalidMetadataError
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 POLL_INTERVAL_SECONDS = 5
+STATUS_HEARTBEAT_SECONDS = 15
 TOP_LEVEL_PATCH_FIELDS = (
     "artists",
     "title",
@@ -348,6 +349,31 @@ def _emit_ai_progress_lines(lines: list[str]) -> None:
         _emit_ai_progress(line)
 
 
+def _emit_ai_status_heartbeat(
+    status: str | None,
+    *,
+    started_at: float,
+    last_status: str | None,
+    last_emit_at: float | None,
+) -> tuple[str | None, float | None]:
+    normalized_status = _normalize_optional_text(status)
+    if not normalized_status:
+        return last_status, last_emit_at
+
+    now = time.monotonic()
+    should_emit = (
+        last_emit_at is None
+        or normalized_status != last_status
+        or now - last_emit_at >= STATUS_HEARTBEAT_SECONDS
+    )
+    if not should_emit:
+        return normalized_status, last_emit_at
+
+    elapsed_seconds = max(0, int(now - started_at))
+    _emit_ai_progress(f"status: {normalized_status} ({elapsed_seconds}s elapsed)")
+    return normalized_status, now
+
+
 async def _load_json_response(resp: aiohttp.ClientResponse, *, non_json_error: str) -> dict[str, Any]:
     try:
         payload = await resp.json()
@@ -380,9 +406,12 @@ async def _wait_for_response(
         return payload
 
     deadline = time.monotonic() + timeout_seconds
+    started_at = time.monotonic()
     current_payload = payload
     seen_progress_events: set[tuple[str, str, str]] = set()
     last_reasoning_summary: str | None = None
+    last_status: str | None = None
+    last_status_emit_at: float | None = None
     while time.monotonic() < deadline:
         status = current_payload.get("status")
         if status in FINAL_RESPONSE_STATUSES:
@@ -392,6 +421,12 @@ async def _wait_for_response(
             current_payload,
             seen_progress_events,
             last_reasoning_summary,
+        )
+        last_status, last_status_emit_at = _emit_ai_status_heartbeat(
+            str(status) if status is not None else None,
+            started_at=started_at,
+            last_status=last_status,
+            last_emit_at=last_status_emit_at,
         )
 
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
@@ -773,15 +808,20 @@ async def _stream_response(
     timeout_seconds: int,
 ) -> dict[str, Any]:
     deadline = time.monotonic() + timeout_seconds
+    started_at = time.monotonic()
     response_id: str | None = None
     seen_progress_events: set[tuple[str, str, str]] = set()
     last_reasoning_summary: str | None = None
+    current_status: str | None = None
+    last_emitted_status: str | None = None
+    last_status_emit_at: float | None = None
 
     event_name: str | None = None
     data_lines: list[str] = []
 
     async def flush_event() -> dict[str, Any] | None:
-        nonlocal event_name, data_lines, response_id, last_reasoning_summary
+        nonlocal event_name, data_lines, response_id, last_reasoning_summary, current_status
+        nonlocal last_emitted_status, last_status_emit_at
 
         event_payload = _decode_sse_event(event_name, data_lines)
         event_name = None
@@ -795,11 +835,18 @@ async def _stream_response(
         if response:
             response_id = str(response.get("id") or response_id or "")
             status = response.get("status")
+            current_status = _normalize_optional_text(status) or current_status
 
             last_reasoning_summary = _emit_progress_from_payload(
                 response,
                 seen_progress_events,
                 last_reasoning_summary,
+            )
+            last_emitted_status, last_status_emit_at = _emit_ai_status_heartbeat(
+                current_status,
+                started_at=started_at,
+                last_status=last_emitted_status,
+                last_emit_at=last_status_emit_at,
             )
 
             if status in FINAL_RESPONSE_STATUSES:
@@ -824,6 +871,12 @@ async def _stream_response(
                     last_reasoning_summary = cleaned
 
         _emit_ai_progress_lines(progress_lines)
+        last_emitted_status, last_status_emit_at = _emit_ai_status_heartbeat(
+            current_status,
+            started_at=started_at,
+            last_status=last_emitted_status,
+            last_emit_at=last_status_emit_at,
+        )
 
         return None
 
